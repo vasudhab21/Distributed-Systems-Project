@@ -1,0 +1,249 @@
+services:
+  redis:
+    image: redis:7
+    container_name: shardworld_redis
+    ports:
+      - "6379:6379"
+
+  coordinator:
+    build:
+      context: .
+      dockerfile: Dockerfile.coordinator
+    container_name: shardworld_coordinator
+    depends_on:
+      - redis
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: shardworld_gateway
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+
+  # ---------------- ZONE 0,0 ----------------
+  zone-0-0-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_0_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=0
+      - MAX_Y=199
+
+  zone-0-0-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_0_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=0
+      - MAX_Y=199
+
+  # ---------------- ZONE 0,1 ----------------
+  zone-0-1-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_1_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=0
+      - MAX_Y=199
+
+  zone-0-1-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_1_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=0
+      - MAX_Y=199
+
+  # ---------------- ZONE 0,2 ----------------
+  zone-0-2-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_2_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=0
+      - MAX_Y=199
+
+  zone-0-2-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_0_2_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_0_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=0
+      - MAX_Y=199
+
+  # ---------------- ZONE 1,0 ----------------
+  zone-1-0-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_0_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=200
+      - MAX_Y=399
+
+  zone-1-0-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_0_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=200
+      - MAX_Y=399
+
+  # ---------------- ZONE 1,1 ----------------
+  zone-1-1-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_1_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=200
+      - MAX_Y=399
+
+  zone-1-1-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_1_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=200
+      - MAX_Y=399
+
+  # ---------------- ZONE 1,2 ----------------
+  zone-1-2-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_2_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=200
+      - MAX_Y=399
+
+  zone-1-2-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_1_2_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_1_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=200
+      - MAX_Y=399
+
+  # ---------------- ZONE 2,0 ----------------
+  zone-2-0-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_0_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=400
+      - MAX_Y=599
+
+  zone-2-0-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_0_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_0
+      - MIN_X=0
+      - MAX_X=199
+      - MIN_Y=400
+      - MAX_Y=599
+
+  # ---------------- ZONE 2,1 ----------------
+  zone-2-1-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_1_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=400
+      - MAX_Y=599
+
+  zone-2-1-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_1_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_1
+      - MIN_X=200
+      - MAX_X=399
+      - MIN_Y=400
+      - MAX_Y=599
+
+  # ---------------- ZONE 2,2 ----------------
+  zone-2-2-a:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_2_a
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=400
+      - MAX_Y=599
+
+  zone-2-2-b:
+    build: { context: ., dockerfile: Dockerfile.zone }
+    container_name: shardworld_zone_2_2_b
+    depends_on: [redis]
+    environment:
+      - REDIS_ADDR=redis:6379
+      - ZONE_ID=zone_2_2
+      - MIN_X=400
+      - MAX_X=599
+      - MIN_Y=400
+      - MAX_Y=599
