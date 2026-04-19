@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -90,10 +91,8 @@ func (s *ZoneServer) broadcast(update *worldpb.ZoneUpdate) {
 	}
 }
 
-// Zombie leader protection: verify leader key from Redis
 func (s *ZoneServer) verifyLeadership(ctx context.Context) bool {
 	key := fmt.Sprintf("zone:%s:leader", s.zoneID)
-
 	val, err := s.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		return false
@@ -205,9 +204,6 @@ func (s *ZoneServer) Move(ctx context.Context, req *worldpb.MoveRequest) (*world
 }
 
 func (s *ZoneServer) StreamZoneUpdates(req *worldpb.StreamRequest, stream worldpb.ZoneService_StreamZoneUpdatesServer) error {
-	log.Printf("[%s][STREAM] subscribed filter=(%d..%d,%d..%d)",
-		s.zoneID, req.MinX, req.MaxX, req.MinY, req.MaxY)
-
 	ch := make(chan *worldpb.ZoneUpdate, 200)
 
 	s.subMu.Lock()
@@ -220,19 +216,11 @@ func (s *ZoneServer) StreamZoneUpdates(req *worldpb.StreamRequest, stream worldp
 		s.subMu.Lock()
 		delete(s.subscribers, id)
 		s.subMu.Unlock()
-		log.Printf("[%s][STREAM] subscriber removed", s.zoneID)
 	}()
 
-	// initial snapshot
 	s.mu.Lock()
 	for pid, p := range s.players {
-		if p.X >= req.MinX && p.X <= req.MaxX && p.Y >= req.MinY && p.Y <= req.MaxY {
-			_ = stream.Send(&worldpb.ZoneUpdate{
-				PlayerId: pid,
-				X:        p.X,
-				Y:        p.Y,
-			})
-		}
+		_ = stream.Send(&worldpb.ZoneUpdate{PlayerId: pid, X: p.X, Y: p.Y})
 	}
 	s.mu.Unlock()
 
@@ -241,10 +229,8 @@ func (s *ZoneServer) StreamZoneUpdates(req *worldpb.StreamRequest, stream worldp
 		case <-stream.Context().Done():
 			return nil
 		case update := <-ch:
-			if update.X >= req.MinX && update.X <= req.MaxX && update.Y >= req.MinY && update.Y <= req.MaxY {
-				if err := stream.Send(update); err != nil {
-					return err
-				}
+			if err := stream.Send(update); err != nil {
+				return err
 			}
 		}
 	}
@@ -268,49 +254,65 @@ func main() {
 		redisAddr = "redis:6379"
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr: redisAddr,
-	})
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
 
 	myAddr := fmt.Sprintf("%s:%d", os.Getenv("HOSTNAME"), port)
 	nodeID := myAddr
 
 	discoveryClient := discovery.NewRedisDiscovery(redisAddr)
 
-	err := discoveryClient.RegisterZone(zoneID, myAddr)
-	if err != nil {
-		log.Printf("[%s][DISCOVERY][WARN] Failed to register zone: %v", zoneID, err)
-	} else {
-		log.Printf("[%s][DISCOVERY] Registered zone addr=%s", zoneID, myAddr)
-	}
-
-	elector := cluster.NewLeaderElector(rdb, zoneID, nodeID)
+	discoveryClient.RegisterZone(zoneID, myAddr)
 
 	server := NewZoneServer(zoneID, minX, maxX, minY, maxY, rdb, nodeID)
+	
+	leaderKey := fmt.Sprintf("zone:%s:leader", zoneID)
 
-	go elector.RunLeaderLoop(&server.isLeader)
+go func() {
+	for {
+		ctx := context.Background()
 
-	// log leadership state
+		// Try to become leader (SETNX)
+		acquired, _ := rdb.SetNX(ctx, leaderKey, nodeID, 5*time.Second).Result()
+
+		if acquired {
+			server.isLeader = true
+			fmt.Println("I am the LEADER")
+		} else {
+			val, _ := rdb.Get(ctx, leaderKey).Result()
+
+			if val == nodeID {
+				server.isLeader = true
+				// renew leadership
+				rdb.Expire(ctx, leaderKey, 5*time.Second)
+				fmt.Println("I am the LEADER (renewed)")
+			} else {
+				server.isLeader = false
+				fmt.Println("I am FOLLOWER")
+			}
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+}()
+
+
+	// ✅ NEW: metrics loop
 	go func() {
 		for {
-			time.Sleep(2 * time.Second)
-			if server.verifyLeadership(context.Background()) {
-				log.Printf("[%s][LEADER] ACTIVE leader node=%s", zoneID, nodeID)
-			}
+			discoveryClient.UpdateNodeMetrics(nodeID, cluster.Metrics{
+				CPUUsage: rand.Float64() * 100,
+				MemoryUsage: rand.Float64() * 100,
+				Latency: rand.Float64() * 50,
+				Load: rand.Float64() * 10,
+			})
+			time.Sleep(5 * time.Second)
 		}
 	}()
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		log.Fatalf("[%s][FATAL] Failed to listen: %v", zoneID, err)
-	}
-
+	lis, _ := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	grpcServer := grpc.NewServer()
 	worldpb.RegisterZoneServiceServer(grpcServer, server)
 
-	log.Printf("[%s][START] Running port=%d bounds=(%d..%d,%d..%d)", zoneID, port, minX, maxX, minY, maxY)
-
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("[%s][FATAL] Failed to serve: %v", zoneID, err)
-	}
-}
+	log.Printf("[%s] running on %d", zoneID, port)
+	grpcServer.Serve(lis)
+}	

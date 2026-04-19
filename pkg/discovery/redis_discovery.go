@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"shardworld/pkg/cluster"
+
 	"github.com/redis/go-redis/v9"
 )
+
+var ctx = context.Background()
 
 type RedisDiscovery struct {
 	rdb *redis.Client
@@ -45,4 +49,48 @@ func (d *RedisDiscovery) GetZoneLeader(zoneID string) (string, error) {
 
 	keyLeader := fmt.Sprintf("zone:%s:leader", zoneID)
 	return d.rdb.Get(ctx, keyLeader).Result()
+}
+
+// ✅ FIXED: Use correct struct (RedisDiscovery) + rdb instead of client
+func (d *RedisDiscovery) UpdateNodeMetrics(nodeID string, metrics cluster.Metrics) error {
+	key := "node:" + nodeID
+
+	data := map[string]interface{}{
+		"cpu":     metrics.CPUUsage,
+		"memory":  metrics.MemoryUsage,
+		"latency": metrics.Latency,
+		"load":    metrics.Load,
+	}
+
+	return d.rdb.HSet(ctx, key, data).Err()
+}
+
+// ✅ FIXED: Use correct struct + rdb + proper import
+func (d *RedisDiscovery) GetAllNodes() ([]cluster.Node, error) {
+	keys, err := d.rdb.Keys(ctx, "node:*").Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var nodes []cluster.Node
+
+	for _, key := range keys {
+		data, err := d.rdb.HGetAll(ctx, key).Result()
+		if err != nil {
+			continue
+		}
+
+		node := cluster.Node{
+			ID: key[5:], // remove "node:"
+		}
+
+		fmt.Sscanf(data["cpu"], "%f", &node.Metrics.CPUUsage)
+		fmt.Sscanf(data["memory"], "%f", &node.Metrics.MemoryUsage)
+		fmt.Sscanf(data["latency"], "%f", &node.Metrics.Latency)
+		fmt.Sscanf(data["load"], "%f", &node.Metrics.Load)
+
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
 }

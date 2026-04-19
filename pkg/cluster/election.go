@@ -1,88 +1,48 @@
 package cluster
 
 import (
-	"context"
-	"fmt"
-	"log"
-	"time"
-
-	"github.com/redis/go-redis/v9"
+	"math"
 )
 
-type LeaderElector struct {
-	rdb       *redis.Client
-	zoneID    string
-	nodeID    string
-	lockKey   string
-	leaderKey string
-	ttl       time.Duration
+type Election struct {
+	Nodes []Node
 }
 
-func NewLeaderElector(rdb *redis.Client, zoneID string, nodeID string) *LeaderElector {
-	return &LeaderElector{
-		rdb:       rdb,
-		zoneID:    zoneID,
-		nodeID:    nodeID,
-		lockKey:   fmt.Sprintf("lock:zone:%s", zoneID),
-		leaderKey: fmt.Sprintf("zone:%s:leader", zoneID),
-		ttl:       5 * time.Second,
-	}
+func calculateScore(m Metrics) float64 {
+	// weights (you can tune these later)
+	wCPU := 0.3
+	wMem := 0.3
+	wLat := 0.2
+	wLoad := 0.2
+
+	return (wCPU * m.CPUUsage) +
+		(wMem * m.MemoryUsage) +
+		(wLat * m.Latency) +
+		(wLoad * m.Load)
 }
 
-func (e *LeaderElector) TryBecomeLeader() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	ok, err := e.rdb.SetNX(ctx, e.lockKey, e.nodeID, e.ttl).Result()
-	if err != nil {
-		log.Printf("[%s][ELECTION][ERROR] %v", e.zoneID, err)
-		return false
+func (e *Election) ElectLeader() *Node {
+	if len(e.Nodes) == 0 {
+		return nil
 	}
 
-	if ok {
-		// I am leader now, update leader pointer
-		e.rdb.Set(ctx, e.leaderKey, e.nodeID, 0)
-		log.Printf("[%s][LEADER] Node=%s became LEADER", e.zoneID, e.nodeID)
-		return true
-	}
+	bestIndex := 0
+	bestScore := math.MaxFloat64
 
-	return false
-}
+	for i, node := range e.Nodes {
+		score := calculateScore(node.Metrics)
 
-func (e *LeaderElector) RefreshLock() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	val, err := e.rdb.Get(ctx, e.lockKey).Result()
-	if err != nil {
-		return false
-	}
-
-	if val != e.nodeID {
-		return false
-	}
-
-	// extend TTL
-	e.rdb.Expire(ctx, e.lockKey, e.ttl)
-	return true
-}
-
-func (e *LeaderElector) RunLeaderLoop(isLeader *bool) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
-
-	for range ticker.C {
-		if *isLeader {
-			ok := e.RefreshLock()
-			if !ok {
-				log.Printf("[%s][LEADER_LOST] Node=%s lost leadership", e.zoneID, e.nodeID)
-				*isLeader = false
-			}
-		} else {
-			ok := e.TryBecomeLeader()
-			if ok {
-				*isLeader = true
-			}
+		if score < bestScore {
+			bestScore = score
+			bestIndex = i
 		}
 	}
+
+	// assign leader
+	for i := range e.Nodes {
+		e.Nodes[i].IsLeader = false
+	}
+	e.Nodes[bestIndex].IsLeader = true
+
+	return &e.Nodes[bestIndex]
 }
