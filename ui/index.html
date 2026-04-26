@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -19,5 +19,49 @@
   <canvas id="game"></canvas>
 
   <script type="module" src="main.js"></script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShardWorld 3D</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- The 3D Game Canvas -->
+    <canvas id="game"></canvas>
+
+    <!-- Top Left: Player Stats HUD -->
+    <div id="hud" class="overlay-box">
+        <h2 class="title">ShardWorld 3D</h2>
+        <div class="stat-row">
+            <span class="label">PLAYER</span>
+            <span id="pid" class="value highlight-blue">connecting...</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">ZONE</span>
+            <span id="zone" class="value highlight-red">loading...</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">POSITION</span>
+            <span id="pos" class="value">(0, 0, 0)</span>
+        </div>
+        <div class="controls-hint">WASD / Arrow Keys • Move</div>
+    </div>
+
+    <!-- Top Right: Online Count -->
+    <div id="online-status" class="overlay-box mini">
+        <span id="online-count" class="value highlight-blue">1</span>
+        <span class="label-small">players online</span>
+    </div>
+
+    <!-- Bottom Right: Minimap -->
+    <div id="minimap-container" class="overlay-box no-padding">
+        <canvas id="mm" width="140" height="140"></canvas>
+    </div>
+
+    <script type="module" src="main.js"></script>
 </body>
 </html>
