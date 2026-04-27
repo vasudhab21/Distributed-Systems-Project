@@ -107,9 +107,9 @@ func (s *ZoneServer) Ping(ctx context.Context, req *worldpb.PingRequest) (*world
 }
 
 func (s *ZoneServer) Join(ctx context.Context, req *worldpb.JoinRequest) (*worldpb.JoinResponse, error) {
-	if !s.verifyLeadership(ctx) {
-		return nil, fmt.Errorf("[%s] not leader", s.zoneID)
-	}
+	if !s.isLeader {
+	return nil, fmt.Errorf("[%s] not leader", s.zoneID)
+    }
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -151,15 +151,17 @@ func (s *ZoneServer) Join(ctx context.Context, req *worldpb.JoinRequest) (*world
 	p := s.players[req.PlayerId]
 
 	return &worldpb.JoinResponse{
-		X: p.X,
-		Y: p.Y,
+	X:        p.X,
+	Y:        p.Y,
+	IsLeader: s.isLeader,
+	NodeId:   s.nodeID,
 	}, nil
 }
 
 func (s *ZoneServer) Move(ctx context.Context, req *worldpb.MoveRequest) (*worldpb.MoveResponse, error) {
-	if !s.verifyLeadership(ctx) {
-		return nil, fmt.Errorf("[%s] not leader", s.zoneID)
-	}
+	if !s.isLeader {
+	return nil, fmt.Errorf("[%s] not leader", s.zoneID)
+    }
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -268,27 +270,34 @@ func main() {
 	leaderKey := fmt.Sprintf("zone:%s:leader", zoneID)
 
 go func() {
+	previousState := false
+
 	for {
 		ctx := context.Background()
 
-		// Try to become leader (SETNX)
 		acquired, _ := rdb.SetNX(ctx, leaderKey, nodeID, 5*time.Second).Result()
 
 		if acquired {
 			server.isLeader = true
-			fmt.Println("I am the LEADER")
 		} else {
 			val, _ := rdb.Get(ctx, leaderKey).Result()
 
 			if val == nodeID {
 				server.isLeader = true
-				// renew leadership
 				rdb.Expire(ctx, leaderKey, 5*time.Second)
-				fmt.Println("I am the LEADER (renewed)")
 			} else {
 				server.isLeader = false
-				fmt.Println("I am FOLLOWER")
 			}
+		}
+
+		// ✅ ONLY LOG WHEN STATE CHANGES
+		if server.isLeader != previousState {
+			if server.isLeader {
+				fmt.Println("I became LEADER")
+			} else {
+				fmt.Println("I became FOLLOWER")
+			}
+			previousState = server.isLeader
 		}
 
 		time.Sleep(2 * time.Second)
