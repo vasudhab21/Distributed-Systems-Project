@@ -1,3 +1,29 @@
+<<<<<<< HEAD
+=======
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ShardWorld 3D</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="hud">
+    <div><b>ShardWorld 3D</b></div>
+    <div>Player: <span id="pid">loading...</span></div>
+    <div>Zone: <span id="zone">unknown</span></div>
+    <div>Position: <span id="pos">(0,0,0)</span></div>
+    <div style="margin-top:8px; font-size: 12px; opacity: 0.8;">
+      Controls: WASD / Arrow Keys
+    </div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <script type="module" src="main.js"></script>
+</body>
+</html> -->
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +33,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<<<<<<< HEAD
     <canvas id="game"></canvas>
 
     <div class="scene-glow"></div>
@@ -22,6 +49,12 @@
         </form>
     </div>
 
+=======
+    <!-- The 3D Game Canvas -->
+    <canvas id="game"></canvas>
+
+    <!-- Top Left: Player Stats HUD -->
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
     <div id="hud" class="overlay-box">
         <h2 class="title">ShardWorld 3D</h2>
         <div class="stat-row">
@@ -36,6 +69,7 @@
             <span class="label">POSITION</span>
             <span id="pos" class="value">(0, 0, 0)</span>
         </div>
+<<<<<<< HEAD
         <div class="stat-row">
             <span class="label">NETWORK</span>
             <span id="net-status" class="value highlight-warn">connecting</span>
@@ -48,10 +82,26 @@
         <span class="label-small">players online</span>
     </div>
 
+=======
+        <div class="controls-hint">WASD / Arrow Keys • Move</div>
+    </div>
+
+    <!-- Top Right: Online Count -->
+    <div id="online-status" class="overlay-box mini">
+        <span id="online-count" class="value highlight-blue">1</span>
+        <span class="label-small">players online</span>
+    </div>
+
+    <!-- Bottom Right: Minimap -->
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
     <div id="minimap-container" class="overlay-box no-padding">
         <canvas id="mm" width="140" height="140"></canvas>
     </div>
 
     <script type="module" src="main.js"></script>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24

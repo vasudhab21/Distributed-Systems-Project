@@ -3,12 +3,17 @@ package main
 import (
 	"context"
 	"encoding/json"
+<<<<<<< HEAD
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"sort"
 	"strings"
+=======
+	"log"
+	"net/http"
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 	"sync"
 	"time"
 
@@ -23,12 +28,16 @@ import (
 
 const GhostRange int32 = 60
 const HysteresisMargin int32 = 20
+<<<<<<< HEAD
 const maxAdminLogEntries = 250
+=======
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 
 type ClientMessage struct {
 	Type string `json:"type"`
 	Dx   int32  `json:"dx"`
 	Dy   int32  `json:"dy"`
+<<<<<<< HEAD
 	Name string `json:"name"`
 }
 
@@ -58,6 +67,15 @@ type AdminMessage struct {
 	Type    string           `json:"type"`
 	Players []PlayerSnapshot `json:"players,omitempty"`
 	Logs    []AdminLogEntry  `json:"logs,omitempty"`
+=======
+}
+
+type ServerMessage struct {
+	Type     string                 `json:"type"`
+	PlayerID string                 `json:"playerId,omitempty"`
+	Zone     string                 `json:"zone,omitempty"`
+	Payload  map[string]interface{} `json:"payload,omitempty"`
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 }
 
 var upgrader = websocket.Upgrader{
@@ -65,11 +83,18 @@ var upgrader = websocket.Upgrader{
 }
 
 type ClientConn struct {
+<<<<<<< HEAD
 	ws         *websocket.Conn
 	playerID   string
 	playerName string
 	zoneID     string
 	mu         sync.Mutex
+=======
+	ws       *websocket.Conn
+	playerID string
+	zoneID   string
+	mu       sync.Mutex
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 }
 
 func (c *ClientConn) send(msg interface{}) {
@@ -78,6 +103,7 @@ func (c *ClientConn) send(msg interface{}) {
 	_ = c.ws.WriteJSON(msg)
 }
 
+<<<<<<< HEAD
 type AdminConn struct {
 	ws *websocket.Conn
 	mu sync.Mutex
@@ -111,10 +137,17 @@ func main() {
 	http.HandleFunc("/admin/ws", handleAdminWebSocket)
 	http.HandleFunc("/admin", handleAdminPage)
 	http.HandleFunc("/healthz", handleHealth)
+=======
+func main() {
+	log.Println("[GATEWAY][START] Starting on :8080")
+
+	http.HandleFunc("/ws", handleWebSocket)
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 
 	fs := http.FileServer(http.Dir("ui"))
 	http.Handle("/", fs)
 
+<<<<<<< HEAD
 	log.Printf("[GATEWAY][START] Listening on %s", listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
@@ -374,6 +407,13 @@ func handleAdminWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+=======
+	log.Println("[GATEWAY][START] Listening on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// Connects to leader of zone using Redis leader key with retry
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 func connectToZoneWithRetry(redisClient *discovery.RedisDiscovery, zoneID string) (*grpc.ClientConn, worldpb.ZoneServiceClient, string, error) {
 	attempt := 0
 
@@ -417,6 +457,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer wsConn.Close()
 
 	playerID := uuid.New().String()
+<<<<<<< HEAD
 	playerName := defaultPlayerName(playerID)
 
 	client := &ClientConn{
@@ -431,6 +472,17 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	zones := cluster.DefaultZones()
 	redisAddr := getenv("REDIS_ADDR", "redis:6379")
 	redisClient := discovery.NewRedisDiscovery(redisAddr)
+=======
+
+	client := &ClientConn{
+		ws:       wsConn,
+		playerID: playerID,
+	}
+
+	zones := cluster.DefaultZones()
+
+	redisClient := discovery.NewRedisDiscovery("redis:6379")
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 
 	var x int32 = 50
 	var y int32 = 50
@@ -450,6 +502,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	client.zoneID = currentZone.ID
 
+<<<<<<< HEAD
+=======
+	// JOIN
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	joinResp, err := grpcClient.Join(ctx, &worldpb.JoinRequest{
 		PlayerId: playerID,
@@ -465,6 +521,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	x = joinResp.X
 	y = joinResp.Y
+<<<<<<< HEAD
 	upsertPlayer(playerID, playerName, currentZone.ID, x, y)
 
 	appendAdminLog("%s joined %s at (%d,%d)", playerLabel(playerName, playerID), currentZone.ID, x, y)
@@ -478,20 +535,44 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	stopStreams := make(chan struct{})
 	go streamZone(grpcClient, currentZone.ID, currentZone.MinX, currentZone.MaxX, currentZone.MinY, currentZone.MaxY, client, stopStreams)
+=======
+
+	log.Printf("[GATEWAY][JOIN] player=%s zone=%s pos=(%d,%d)", playerID, currentZone.ID, x, y)
+
+	client.send(ServerMessage{
+		Type:     "welcome",
+		PlayerID: playerID,
+		Zone:     currentZone.ID,
+	})
+
+	// STREAM HANDLING
+	stopStreams := make(chan struct{})
+
+	// main zone stream
+	go streamZone(grpcClient, currentZone.ID, currentZone.MinX, currentZone.MaxX, currentZone.MinY, currentZone.MaxY, client, stopStreams)
+
+	// ghost neighbor streams
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 	startGhostStreams(redisClient, zones, currentZone, client, stopStreams)
 
 	for {
 		_, raw, err := wsConn.ReadMessage()
 		if err != nil {
+<<<<<<< HEAD
 			appendAdminLog("%s disconnected from %s", playerLabel(client.playerName, playerID), client.zoneID)
 			close(stopStreams)
 			removePlayer(playerID)
+=======
+			log.Printf("[GATEWAY][DISCONNECT] player=%s err=%v", playerID, err)
+			close(stopStreams)
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 			return
 		}
 
 		var msg ClientMessage
 		_ = json.Unmarshal(raw, &msg)
 
+<<<<<<< HEAD
 		switch msg.Type {
 		case "set_name":
 			oldName := client.playerName
@@ -510,10 +591,81 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				PlayerId: playerID,
 				Dx:       msg.Dx,
 				Dy:       msg.Dy,
+=======
+		if msg.Type != "move" {
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		resp, err := grpcClient.Move(ctx, &worldpb.MoveRequest{
+			PlayerId: playerID,
+			Dx:       msg.Dx,
+			Dy:       msg.Dy,
+		})
+		cancel()
+
+		// FAILOVER FIX: if leader died, reconnect automatically
+		if err != nil {
+			log.Printf("[GATEWAY][WARN] Move failed, reconnecting zone=%s err=%v", currentZone.ID, err)
+
+			grpcConn.Close()
+
+			grpcConn, grpcClient, _, err = connectToZoneWithRetry(redisClient, currentZone.ID)
+			if err != nil {
+				log.Printf("[GATEWAY][ERROR] Cannot reconnect zone=%s err=%v", currentZone.ID, err)
+				return
+			}
+
+			continue
+		}
+
+		x = resp.X
+		y = resp.Y
+
+		newZone := cluster.FindZone(zones, x, y)
+		if newZone == nil {
+			continue
+		}
+
+		// hysteresis (prevents flicker)
+		if newZone.ID != currentZone.ID {
+			if x >= currentZone.MinX+HysteresisMargin &&
+				x <= currentZone.MaxX-HysteresisMargin &&
+				y >= currentZone.MinY+HysteresisMargin &&
+				y <= currentZone.MaxY-HysteresisMargin {
+				continue
+			}
+
+			log.Printf("[GATEWAY][HANDOVER] player=%s %s -> %s at (%d,%d)",
+				playerID, currentZone.ID, newZone.ID, x, y)
+
+			// stop old streams
+			close(stopStreams)
+
+			grpcConn.Close()
+
+			// connect to new zone leader with retry
+			grpcConn, grpcClient, _, err = connectToZoneWithRetry(redisClient, newZone.ID)
+			if err != nil {
+				log.Printf("[GATEWAY][ERROR] Cannot connect new zone=%s err=%v", newZone.ID, err)
+				return
+			}
+
+			currentZone = newZone
+			client.zoneID = currentZone.ID
+
+			// re-join
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			_, err = grpcClient.Join(ctx, &worldpb.JoinRequest{
+				PlayerId: playerID,
+				X:        x,
+				Y:        y,
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 			})
 			cancel()
 
 			if err != nil {
+<<<<<<< HEAD
 				log.Printf("[GATEWAY][WARN] Move failed, reconnecting zone=%s err=%v", currentZone.ID, err)
 
 				grpcConn.Close()
@@ -583,6 +735,23 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					Zone: currentZone.ID,
 				})
 			}
+=======
+				log.Printf("[GATEWAY][ERROR] Join new zone failed: %v", err)
+				return
+			}
+
+			// restart streams
+			stopStreams = make(chan struct{})
+
+			go streamZone(grpcClient, currentZone.ID, currentZone.MinX, currentZone.MaxX, currentZone.MinY, currentZone.MaxY, client, stopStreams)
+
+			startGhostStreams(redisClient, zones, currentZone, client, stopStreams)
+
+			client.send(ServerMessage{
+				Type: "zone_change",
+				Zone: currentZone.ID,
+			})
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 		}
 	}
 }
@@ -636,11 +805,18 @@ func streamZone(grpcClient worldpb.ZoneServiceClient, zoneID string, minX, maxX,
 			client.send(ServerMessage{
 				Type: "update",
 				Payload: map[string]interface{}{
+<<<<<<< HEAD
 					"zone":       zoneID,
 					"playerId":   update.PlayerId,
 					"playerName": playerNameByID(update.PlayerId),
 					"x":          update.X,
 					"y":          update.Y,
+=======
+					"zone":     zoneID,
+					"playerId": update.PlayerId,
+					"x":        update.X,
+					"y":        update.Y,
+>>>>>>> 88fa5cfee7a3c20ced1f067f6ecc0e53dbb4cc24
 				},
 			})
 		}
