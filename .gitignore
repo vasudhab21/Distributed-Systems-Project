@@ -1,0 +1,8 @@
+.gocache/
+.gomodcache/
+*.zip
+gateway.exe
+zone-server.exe
+coordinator.exe
+.gocache/
+.gomodcache/
