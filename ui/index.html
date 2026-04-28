@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShardWorld 3D</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/jpeg" href="logo.png">
+</head>
+<body>
+    <canvas id="game"></canvas>
+
+    <div class="scene-glow"></div>
+
+    <div id="name-overlay" class="name-overlay">
+        <form id="name-form" class="name-card">
+            <p class="name-kicker">Enter The World</p>
+            <h1>Choose your player name</h1>
+            <p class="name-copy">This name will appear in the game, the admin panel, and the live gateway logs.</p>
+            <label class="name-label" for="player-name-input">Player Name</label>
+            <input id="player-name-input" class="name-input" type="text" maxlength="24" placeholder="Type a name" autocomplete="nickname">
+            <button class="name-button" type="submit">Join ShardWorld</button>
+        </form>
+    </div>
+
+    <div id="hud" class="overlay-box">
+        <h2 class="title">ShardWorld 3D</h2>
+        <div class="stat-row">
+            <span class="label">PLAYER</span>
+            <span id="pid" class="value highlight-blue">connecting...</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">ZONE</span>
+            <span id="zone" class="value highlight-red">loading...</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">POSITION</span>
+            <span id="pos" class="value">(0, 0, 0)</span>
+        </div>
+        <div class="stat-row">
+            <span class="label">NETWORK</span>
+            <span id="net-status" class="value highlight-warn">connecting</span>
+        </div>
+        <div class="controls-hint">WASD / Arrow Keys • Move</div>
+    </div>
+
+    <div id="online-status" class="overlay-box mini">
+        <span id="online-count" class="value highlight-blue">0</span>
+        <span class="label-small">players online</span>
+    </div>
+
+    <div id="minimap-container" class="overlay-box no-padding">
+        <canvas id="mm" width="140" height="140"></canvas>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
