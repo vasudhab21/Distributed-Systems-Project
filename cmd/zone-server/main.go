@@ -268,7 +268,8 @@ func main() {
 	leaderKey := fmt.Sprintf("zone:%s:leader", zoneID)
 
 	go func() {
-		previousState := false
+    previousState := false
+    firstRun := true   // ✅ ensures first print happens
 
 		for {
 			ctx := context.Background()
@@ -288,19 +289,20 @@ func main() {
 				}
 			}
 
-			// ✅ ONLY LOG WHEN STATE CHANGES
-			if server.isLeader != previousState {
+			// ✅ FIXED LOGIC
+			if firstRun || server.isLeader != previousState {
 				if server.isLeader {
-					fmt.Println("I became LEADER")
+					fmt.Println("[", server.zoneID, "] became LEADER:", server.nodeID)
 				} else {
-					fmt.Println("I became FOLLOWER")
+					fmt.Println("[", server.zoneID, "] became FOLLOWER:", server.nodeID)
 				}
 				previousState = server.isLeader
+				firstRun = false
 			}
 
 			time.Sleep(2 * time.Second)
 		}
-	}()
+}()
 
 	// ✅ NEW: metrics loop
 	go func() {
